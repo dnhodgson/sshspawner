@@ -353,7 +353,7 @@ class SSHSpawner(Spawner):
         else:
             remote_username = username
         
-        async with asyncssh.connect(self.remote_ip, username=remote_user,client_keys=[(k,c)],known_hosts=None) as conn:
+        async with asyncssh.connect(self.remote_ip, username=remote_username,client_keys=[(k,c)],known_hosts=None) as conn:
             result = await conn.run(command)
             stdout = result.stdout
             stderr = result.stderr

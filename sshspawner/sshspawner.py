@@ -87,7 +87,7 @@ class SSHSpawner(Spawner):
             the config or it will default to random"""),
             config=True)
     
-    remote_username = Unicode(None,
+    remote_user = Unicode(None,
             help=dedent("""If you want a different remote ssh username that will be static for all users"""),
             config=True)
 

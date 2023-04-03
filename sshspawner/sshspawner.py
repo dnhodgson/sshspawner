@@ -86,6 +86,10 @@ class SSHSpawner(Spawner):
             map users to IPs that they should ssh to. This must be set in 
             the config or it will default to random"""),
             config=True)
+    
+    remote_username = Unicode(None,
+            help=dedent("""If you want a different remote ssh username that will be static for all users"""),
+            config=True)
 
     def load_state(self, state):
         """Restore state about ssh-spawned server after a hub restart.
@@ -143,15 +147,18 @@ class SSHSpawner(Spawner):
                         self.cert_paths,
                         local_resource_path
                     )
-
+                if self.remote_user:
+                    remote_username = self.remote_user
+                else:
+                    remote_username = username
                 # create resource path dir in user's home on remote
-                async with asyncssh.connect(self.remote_ip, username=username,client_keys=[(k,c)],known_hosts=None) as conn:
+                async with asyncssh.connect(self.remote_ip, username=remote_username,client_keys=[(k,c)],known_hosts=None) as conn:
                     mkdir_cmd = "mkdir -p {path} 2>/dev/null".format(path=self.resource_path)
                     result = await conn.run(mkdir_cmd)
 
                 # copy files
                 files = [os.path.join(local_resource_path, f) for f in os.listdir(local_resource_path)]
-                async with asyncssh.connect(self.remote_ip, username=username,client_keys=[(k,c)],known_hosts=None) as conn:
+                async with asyncssh.connect(self.remote_ip, username=remote_username,client_keys=[(k,c)],known_hosts=None) as conn:
                     await asyncssh.scp(files, (conn, self.resource_path))
 
         if self.hub_api_url != "":
@@ -250,9 +257,14 @@ class SSHSpawner(Spawner):
         k = asyncssh.read_private_key(kf)
         #c = asyncssh.read_certificate(cf)
         c = asyncssh.read_public_key(cf)
+        
+        if self.remote_user:
+            remote_username = self.remote_user
+        else:
+            remote_username = username
 
         # this needs to be done against remote_host, first time we're calling up
-        async with asyncssh.connect(self.remote_host,username=username,client_keys=[(k,c)],known_hosts=None) as conn:
+        async with asyncssh.connect(self.remote_host,username=remote_username,client_keys=[(k,c)],known_hosts=None) as conn:
             result = await conn.run(self.remote_port_command)
             stdout = result.stdout
             stderr = result.stderr
@@ -305,7 +317,12 @@ class SSHSpawner(Spawner):
             with open(run_script, "r") as f:
                 self.log.debug(run_script + " was written as:\n" + f.read())
 
-        async with asyncssh.connect(self.remote_ip, username=username,client_keys=[(k,c)],known_hosts=None) as conn:
+        if self.remote_user:
+            remote_username = self.remote_user
+        else:
+            remote_username = username
+                
+        async with asyncssh.connect(self.remote_ip, username=remote_username,client_keys=[(k,c)],known_hosts=None) as conn:
             result = await conn.run("bash -s", stdin=run_script)
             stdout = result.stdout
             stderr = result.stderr
@@ -331,7 +348,12 @@ class SSHSpawner(Spawner):
 
         command = "kill -s %s %d < /dev/null"  % (sig, self.pid)
 
-        async with asyncssh.connect(self.remote_ip, username=username,client_keys=[(k,c)],known_hosts=None) as conn:
+        if self.remote_user:
+            remote_username = self.remote_user
+        else:
+            remote_username = username
+        
+        async with asyncssh.connect(self.remote_ip, username=remote_user,client_keys=[(k,c)],known_hosts=None) as conn:
             result = await conn.run(command)
             stdout = result.stdout
             stderr = result.stderr

@@ -178,6 +178,8 @@ class SSHSpawner(Spawner):
         if not has_port:
             cmd.append(f"--port={port}")
 
+        cmd.append("--config=~/.jupyter/jupyter_notebook_config.py")
+
         remote_cmd = ' '.join(cmd)
 
         self.pid = await self.exec_notebook(remote_cmd)
@@ -273,6 +275,7 @@ class SSHSpawner(Spawner):
         if stdout != b"":
             ip, port = stdout.split()
             port = int(port)
+            self.port = port
             self.log.debug("ip={} port={}".format(ip, port))
         else:
             ip, port = None, None
@@ -290,6 +293,8 @@ class SSHSpawner(Spawner):
         if self.path:
             env['PATH'] = self.path
         username = self.get_remote_user(self.user.name)
+        env['JUPYTERHUB_SERVICE_URL'] = "http://0.0.0.0:{port}/user/{username}/".format(port=self.port,username=username)
+        self.log.debug(env)
         kf = self.ssh_keyfile.format(username=username)
         cf = kf + "-cert.pub"
         k = asyncssh.read_private_key(kf)
